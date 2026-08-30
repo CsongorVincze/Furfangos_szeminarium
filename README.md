@@ -1,0 +1,1 @@
+#Szeminarium leiras
