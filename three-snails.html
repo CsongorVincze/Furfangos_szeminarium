@@ -1,0 +1,362 @@
+<div id="three-snails-viz" class="three-snails-viz">
+  <style>
+    #three-snails-viz {
+      width: 100%;
+      color: var(--foreground);
+    }
+
+    #three-snails-viz h2 {
+      margin-block-end: 0.65rem;
+    }
+
+    #three-snails-viz .viz-controls {
+      align-items: center;
+      margin-block-end: 0.5rem;
+    }
+
+    #three-snails-viz .playback-control {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      min-width: min(100%, 18rem);
+    }
+
+    #three-snails-viz .playback-control .form-label {
+      margin: 0;
+      white-space: nowrap;
+    }
+
+    #three-snails-viz .playback-control .form-range {
+      min-width: 7rem;
+    }
+
+    #three-snails-viz .sim-svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      overflow: visible;
+    }
+
+    #three-snails-viz .initial-outline {
+      fill: none;
+      stroke: var(--border);
+      stroke-width: 1.5;
+      stroke-dasharray: 7 7;
+    }
+
+    #three-snails-viz .moving-outline {
+      fill: none;
+      stroke: var(--muted-foreground);
+      stroke-width: 1.5;
+      opacity: 0.48;
+    }
+
+    #three-snails-viz .trail {
+      fill: none;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.68;
+    }
+
+    #three-snails-viz .velocity {
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      opacity: 0.82;
+    }
+
+    #three-snails-viz .series-1 {
+      color: var(--viz-series-1);
+      stroke: var(--viz-series-1);
+    }
+
+    #three-snails-viz .series-2 {
+      color: var(--viz-series-2);
+      stroke: var(--viz-series-2);
+    }
+
+    #three-snails-viz .series-3 {
+      color: var(--viz-series-3);
+      stroke: var(--viz-series-3);
+    }
+
+    #three-snails-viz .snail-shell {
+      fill: var(--card);
+      stroke: currentColor;
+      stroke-width: 2.5;
+    }
+
+    #three-snails-viz .snail-number,
+    #three-snails-viz .snail-shell-mark {
+      fill: currentColor;
+      stroke: none;
+      text-anchor: middle;
+      dominant-baseline: central;
+      font-size: var(--font-size-base);
+      font-weight: 500;
+    }
+
+    #three-snails-viz .snail-shell-mark {
+      opacity: 0.35;
+    }
+
+    #three-snails-viz .diagram-label {
+      fill: var(--muted-foreground);
+      font-size: var(--font-size-base);
+    }
+
+    #three-snails-viz .dimension-line {
+      stroke: var(--muted-foreground);
+      stroke-width: 1;
+      opacity: 0.72;
+    }
+
+    #three-snails-viz .dimension-cap {
+      stroke: var(--muted-foreground);
+      stroke-width: 1;
+      opacity: 0.72;
+    }
+
+    #three-snails-viz .center-mark {
+      fill: var(--muted-foreground);
+      opacity: 0.28;
+    }
+
+    #three-snails-viz .status-line {
+      margin-block-start: 0.15rem;
+    }
+
+    @media (max-width: 520px) {
+      #three-snails-viz .playback-control {
+        flex-basis: 100%;
+      }
+    }
+  </style>
+
+  <h2>Három csiga mozgása</h2>
+
+  <div class="viz-controls" aria-label="Szimuláció vezérlői">
+    <button id="snail-play" class="btn btn-primary" type="button" aria-pressed="true">Szünet</button>
+    <button id="snail-reset" class="btn btn-ghost" type="button">Újrakezdés</button>
+    <div class="playback-control">
+      <label class="form-label" for="snail-speed">Lejátszási sebesség: <output id="snail-speed-output" class="tabular-nums">1×</output></label>
+      <input id="snail-speed" class="form-range" type="range" min="0.25" max="3" step="0.25" value="1" aria-label="Lejátszási sebesség">
+    </div>
+  </div>
+
+  <svg class="sim-svg" viewBox="0 0 720 470" role="img" aria-labelledby="snail-title snail-description">
+    <title id="snail-title">Három csiga egymást követve mozog egy szabályos háromszögben</title>
+    <desc id="snail-description">A három számozott csiga színes spirális pályán halad a másik csiga irányába; a mozgó háromszög közben folyamatosan zsugorodik és forog.</desc>
+
+    <defs>
+      <marker id="snail-arrow-1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--viz-series-1)"></path>
+      </marker>
+      <marker id="snail-arrow-2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--viz-series-2)"></path>
+      </marker>
+      <marker id="snail-arrow-3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--viz-series-3)"></path>
+      </marker>
+    </defs>
+
+    <polygon id="snail-initial-triangle" class="initial-outline" points="360,76.8 510,336.6 210,336.6"></polygon>
+    <polygon id="snail-moving-triangle" class="moving-outline" points="360,76.8 510,336.6 210,336.6"></polygon>
+
+    <line class="dimension-line" x1="210" y1="357" x2="510" y2="357"></line>
+    <line class="dimension-cap" x1="210" y1="349" x2="210" y2="365"></line>
+    <line class="dimension-cap" x1="510" y1="349" x2="510" y2="365"></line>
+    <text class="diagram-label" x="360" y="384" text-anchor="middle">60 cm</text>
+    <text class="diagram-label" x="36" y="38">5 cm/perc</text>
+
+    <circle class="center-mark" cx="360" cy="250" r="3"></circle>
+
+    <path id="snail-trail-0" class="trail series-1" d="M 360 76.8"></path>
+    <path id="snail-trail-1" class="trail series-2" d="M 510 336.6"></path>
+    <path id="snail-trail-2" class="trail series-3" d="M 210 336.6"></path>
+
+    <line id="snail-velocity-0" class="velocity series-1" marker-end="url(#snail-arrow-1)" x1="360" y1="76.8" x2="390" y2="128.8"></line>
+    <line id="snail-velocity-1" class="velocity series-2" marker-end="url(#snail-arrow-2)" x1="510" y1="336.6" x2="480" y2="336.6"></line>
+    <line id="snail-velocity-2" class="velocity series-3" marker-end="url(#snail-arrow-3)" x1="210" y1="336.6" x2="240" y2="284.6"></line>
+
+    <g id="snail-0" class="snail series-1" transform="translate(360 76.8)">
+      <circle class="snail-shell" r="13"></circle>
+      <circle class="snail-shell-mark" cx="-3" cy="-3" r="4"></circle>
+      <text class="snail-number" y="0.5">1</text>
+    </g>
+    <g id="snail-1" class="snail series-2" transform="translate(510 336.6)">
+      <circle class="snail-shell" r="13"></circle>
+      <circle class="snail-shell-mark" cx="-3" cy="-3" r="4"></circle>
+      <text class="snail-number" y="0.5">2</text>
+    </g>
+    <g id="snail-2" class="snail series-3" transform="translate(210 336.6)">
+      <circle class="snail-shell" r="13"></circle>
+      <circle class="snail-shell-mark" cx="-3" cy="-3" r="4"></circle>
+      <text class="snail-number" y="0.5">3</text>
+    </g>
+  </svg>
+
+  <div id="snail-status" class="status-line text-small" aria-live="polite">Szimulációs idő: 0,00 perc</div>
+
+  <script>
+    (() => {
+      const root = document.getElementById('three-snails-viz');
+      const playButton = document.getElementById('snail-play');
+      const resetButton = document.getElementById('snail-reset');
+      const speedInput = document.getElementById('snail-speed');
+      const speedOutput = document.getElementById('snail-speed-output');
+      const statusLine = document.getElementById('snail-status');
+      const movingTriangle = document.getElementById('snail-moving-triangle');
+      const trailPaths = [0, 1, 2].map((index) => document.getElementById(`snail-trail-${index}`));
+      const velocityLines = [0, 1, 2].map((index) => document.getElementById(`snail-velocity-${index}`));
+      const snailGroups = [0, 1, 2].map((index) => document.getElementById(`snail-${index}`));
+
+      const center = { x: 360, y: 250 };
+      const sideCentimeters = 60;
+      const centimetersToPixels = 5;
+      const snailSpeed = 5;
+      const circumradius = sideCentimeters / Math.sqrt(3);
+      const initialCentimeterPositions = [
+        { x: 0, y: -circumradius },
+        { x: sideCentimeters / 2, y: circumradius / 2 },
+        { x: -sideCentimeters / 2, y: circumradius / 2 }
+      ];
+      const initialPositions = initialCentimeterPositions.map((point) => ({
+        x: center.x + point.x * centimetersToPixels,
+        y: center.y + point.y * centimetersToPixels
+      }));
+
+      let positions = initialPositions.map((point) => ({ ...point }));
+      let trails = initialPositions.map((point) => [{ ...point }]);
+      let simulationMinutes = 0;
+      let playbackRate = Number(speedInput.value);
+      let isRunning = true;
+      let hasFinished = false;
+      let lastTimestamp = null;
+      let lastAnnouncedTimestamp = 0;
+
+      const formatMinutes = (minutes) => minutes.toFixed(2).replace('.', ',');
+      const pointString = (point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`;
+
+      const updateStatus = (force = false) => {
+        const now = performance.now();
+        if (!force && now - lastAnnouncedTimestamp < 180) return;
+        lastAnnouncedTimestamp = now;
+        statusLine.textContent = hasFinished
+          ? `Szimulációs idő: ${formatMinutes(simulationMinutes)} perc · a pályák közös pontba érkeztek`
+          : `Szimulációs idő: ${formatMinutes(simulationMinutes)} perc`;
+      };
+
+      const render = () => {
+        movingTriangle.setAttribute('points', positions.map(pointString).join(' '));
+
+        positions.forEach((position, index) => {
+          snailGroups[index].setAttribute('transform', `translate(${position.x.toFixed(2)} ${position.y.toFixed(2)})`);
+          trailPaths[index].setAttribute('d', trails[index].map((point, pointIndex) => `${pointIndex === 0 ? 'M' : 'L'} ${pointString(point)}`).join(' '));
+
+          const nextPosition = positions[(index + 1) % positions.length];
+          const dx = nextPosition.x - position.x;
+          const dy = nextPosition.y - position.y;
+          const distance = Math.hypot(dx, dy);
+          if (distance < 0.5 || hasFinished) {
+            velocityLines[index].setAttribute('visibility', 'hidden');
+            return;
+          }
+          const arrowStart = 16;
+          const arrowLength = 35;
+          const ux = dx / distance;
+          const uy = dy / distance;
+          velocityLines[index].setAttribute('visibility', 'visible');
+          velocityLines[index].setAttribute('x1', (position.x + ux * arrowStart).toFixed(2));
+          velocityLines[index].setAttribute('y1', (position.y + uy * arrowStart).toFixed(2));
+          velocityLines[index].setAttribute('x2', (position.x + ux * (arrowStart + arrowLength)).toFixed(2));
+          velocityLines[index].setAttribute('y2', (position.y + uy * (arrowStart + arrowLength)).toFixed(2));
+        });
+      };
+
+      const reset = () => {
+        positions = initialPositions.map((point) => ({ ...point }));
+        trails = initialPositions.map((point) => [{ ...point }]);
+        simulationMinutes = 0;
+        isRunning = true;
+        hasFinished = false;
+        lastTimestamp = null;
+        playButton.textContent = 'Szünet';
+        playButton.setAttribute('aria-pressed', 'true');
+        render();
+        updateStatus(true);
+      };
+
+      const step = (elapsedMinutes) => {
+        const nextPositions = positions.map((position, index) => {
+          const target = positions[(index + 1) % positions.length];
+          const dx = target.x - position.x;
+          const dy = target.y - position.y;
+          const distance = Math.hypot(dx, dy);
+          if (distance === 0) return { ...position };
+          const travel = snailSpeed * centimetersToPixels * elapsedMinutes;
+          const fraction = Math.min(1, travel / distance);
+          return {
+            x: position.x + dx * fraction,
+            y: position.y + dy * fraction
+          };
+        });
+
+        positions = nextPositions;
+        simulationMinutes += elapsedMinutes;
+        positions.forEach((position, index) => {
+          const previousPoint = trails[index][trails[index].length - 1];
+          if (Math.hypot(position.x - previousPoint.x, position.y - previousPoint.y) > 0.6) {
+            trails[index].push({ ...position });
+          }
+        });
+
+        const largestGap = positions.reduce((largest, position, index) => {
+          const target = positions[(index + 1) % positions.length];
+          return Math.max(largest, Math.hypot(target.x - position.x, target.y - position.y));
+        }, 0);
+        if (largestGap < 1.2) {
+          positions = positions.map(() => ({ ...center }));
+          positions.forEach((position, index) => trails[index].push({ ...position }));
+          hasFinished = true;
+          isRunning = false;
+          playButton.textContent = 'Lejátszás';
+          playButton.setAttribute('aria-pressed', 'false');
+        }
+      };
+
+      playButton.addEventListener('click', () => {
+        if (hasFinished) {
+          reset();
+          return;
+        }
+        isRunning = !isRunning;
+        playButton.textContent = isRunning ? 'Szünet' : 'Lejátszás';
+        playButton.setAttribute('aria-pressed', String(isRunning));
+        lastTimestamp = null;
+        updateStatus(true);
+      });
+
+      resetButton.addEventListener('click', reset);
+
+      speedInput.addEventListener('input', () => {
+        playbackRate = Number(speedInput.value);
+        speedOutput.textContent = `${playbackRate.toFixed(2).replace(/\.00$/, '')}×`;
+      });
+
+      const frame = (timestamp) => {
+        if (lastTimestamp === null) lastTimestamp = timestamp;
+        const elapsedSeconds = Math.min(0.05, (timestamp - lastTimestamp) / 1000);
+        lastTimestamp = timestamp;
+        if (isRunning && !hasFinished) step(elapsedSeconds * playbackRate);
+        render();
+        updateStatus();
+        requestAnimationFrame(frame);
+      };
+
+      render();
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</div>

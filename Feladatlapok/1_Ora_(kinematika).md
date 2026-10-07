@@ -1,6 +1,6 @@
 # Furfangos Szeminárium 1. Óra 
 
-Csocsó sziasztok! Az első órára ezeket a feladatokat hoztam (ezek mind a 333 elejéről vannak, később majd válogatok máshonnan is.)
+Sziasztok! Az első órára ezeket a feladatokat hoztam (ezek mind a 333 elejéről vannak, később majd válogatok máshonnan is.)
 
 ## Elsődleges feladatok
 (Elsősorban ezeket nézzük meg)

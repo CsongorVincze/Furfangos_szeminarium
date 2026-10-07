@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Csempészhajó üldözése</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      color: #1f2937;
+      background: #f7f8fa;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 2rem 1rem;
+    }
+
+    main {
+      width: min(100%, 850px);
+      margin: 0 auto;
+      padding: clamp(1rem, 4vw, 2rem);
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      box-shadow: 0 8px 28px rgb(15 23 42 / 6%);
+    }
+
+    h1 {
+      margin: 0 0 0.6rem;
+      font-size: clamp(1.5rem, 4vw, 2rem);
+    }
+
+    .intro {
+      max-width: 68ch;
+      margin: 0 0 1.25rem;
+      color: #4b5563;
+      line-height: 1.55;
+    }
+
+    .diagram-wrap {
+      overflow: hidden;
+      border: 1px solid #dbe3e8;
+      border-radius: 8px;
+      background: #f4fafc;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .shore { stroke: #7c6b4b; stroke-width: 3; }
+    .dimension { stroke: #596579; stroke-width: 1.5; }
+    .track { stroke: #8996a8; stroke-width: 2; stroke-dasharray: 6 6; }
+    .pursuit-trail { fill: none; stroke: #2563eb; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .sightline { stroke: #64748b; stroke-width: 1.5; stroke-dasharray: 5 5; opacity: 0.75; }
+    .diagram-label { fill: #344256; font-size: 15px; }
+    .small-label { fill: #5b6675; font-size: 13px; }
+    .police-hull { fill: #2563eb; stroke: #173f9b; stroke-width: 1.5; }
+    .smuggler-hull { fill: #e4572e; stroke: #a93517; stroke-width: 1.5; }
+    .boat-window { fill: #dbeafe; }
+    .smuggler-window { fill: #ffedd5; }
+
+    .controls {
+      display: grid;
+      grid-template-columns: auto auto minmax(220px, 1fr);
+      align-items: center;
+      gap: 0.75rem 1rem;
+      margin-top: 1rem;
+    }
+
+    button {
+      min-height: 42px;
+      padding: 0.55rem 1rem;
+      border: 0;
+      border-radius: 7px;
+      color: white;
+      background: #2563eb;
+      font: inherit;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    button:hover { background: #1d4ed8; }
+    button.secondary { color: #263446; background: #e9eef3; }
+    button.secondary:hover { background: #dce4ec; }
+    button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px solid #93c5fd; outline-offset: 2px; }
+
+    .speed-control {
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .speed-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      font-size: 0.95rem;
+    }
+
+    output { font-variant-numeric: tabular-nums; font-weight: 700; }
+    input[type="range"] { width: 100%; accent-color: #2563eb; }
+
+    .status {
+      min-height: 3.2em;
+      margin: 0.85rem 0 0;
+      color: #344256;
+      line-height: 1.5;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .status strong { color: #172554; }
+
+    details {
+      margin-top: 1.1rem;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 0.8rem;
+      color: #4b5563;
+    }
+
+    summary { width: fit-content; cursor: pointer; color: #263446; font-weight: 600; }
+    details p { margin: 0.55rem 0 0; line-height: 1.55; }
+
+    @media (max-width: 600px) {
+      body { padding: 0.75rem; }
+      .controls { grid-template-columns: 1fr 1fr; }
+      .speed-control { grid-column: 1 / -1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Csempészhajó üldözése</h1>
+    <p class="intro">
+      A csempészek a parttól merőlegesen haladnak. A naszád induláskor <em>d</em> távolságra van tőlük,
+      és mindig feléjük fordul. Állítsd be a sebességarányt, majd indítsd el a szimulációt:
+      melyik értéknél éri utol őket éppen <em>d</em>-re a parttól?
+    </p>
+
+    <div class="diagram-wrap">
+      <svg viewBox="0 0 760 420" role="img" aria-labelledby="scene-title scene-desc">
+        <title id="scene-title">A parti őrség naszádja csempészhajót üldöz</title>
+        <desc id="scene-desc">A csempészek egyenes vonalban, a partra merőlegesen haladnak. A parti őrség naszádja a változó görbe pályán mindig feléjük fordul. A parttól d távolságot jelöli a függőleges méretvonal.</desc>
+
+        <rect x="0" y="0" width="760" height="420" fill="#f4fafc"></rect>
+        <rect x="0" y="338" width="760" height="82" fill="#eee8dc"></rect>
+        <line class="shore" x1="0" y1="337" x2="760" y2="337"></line>
+        <text class="small-label" x="24" y="390">PART</text>
+
+        <text class="small-label" x="160" y="384" text-anchor="middle">naszád indul</text>
+        <text class="small-label" x="420" y="384" text-anchor="middle">csempészek indulnak</text>
+
+        <line class="track" x1="420" y1="336" x2="420" y2="76"></line>
+        <line class="dimension" x1="160" y1="292" x2="420" y2="292"></line>
+        <line class="dimension" x1="160" y1="285" x2="160" y2="299"></line>
+        <line class="dimension" x1="420" y1="285" x2="420" y2="299"></line>
+        <text class="diagram-label" x="290" y="284" text-anchor="middle">kezdeti távolság: d</text>
+
+        <line class="dimension" x1="469" y1="76" x2="469" y2="336"></line>
+        <line class="dimension" x1="462" y1="76" x2="476" y2="76"></line>
+        <line class="dimension" x1="462" y1="336" x2="476" y2="336"></line>
+        <text class="diagram-label" x="484" y="204">d</text>
+        <text class="small-label" x="484" y="225">a parttól</text>
+
+        <path id="pursuit-trail" class="pursuit-trail" d="M 160 336"></path>
+        <line id="sightline" class="sightline" x1="160" y1="336" x2="420" y2="336"></line>
+
+        <g id="police-boat" transform="translate(160 336) rotate(0)">
+          <path class="police-hull" d="M -17 -7 L 9 -7 L 18 0 L 9 7 L -17 7 Z"></path>
+          <rect class="boat-window" x="-6" y="-4" width="8" height="8" rx="1"></rect>
+        </g>
+        <g id="smuggler-boat" transform="translate(420 336) rotate(270)">
+          <path class="smuggler-hull" d="M -17 -7 L 9 -7 L 18 0 L 9 7 L -17 7 Z"></path>
+          <rect class="smuggler-window" x="-6" y="-4" width="8" height="8" rx="1"></rect>
+        </g>
+
+        <circle cx="160" cy="336" r="3" fill="#173f9b"></circle>
+        <circle cx="420" cy="336" r="3" fill="#a93517"></circle>
+      </svg>
+    </div>
+
+    <div class="controls" aria-label="Szimuláció vezérlői">
+      <button id="play-button" type="button">Indítás</button>
+      <button id="reset-button" class="secondary" type="button">Újrakezdés</button>
+      <div class="speed-control">
+        <div class="speed-heading">
+          <label for="ratio-slider">Naszád sebessége / csempészeké</label>
+          <output id="ratio-output" for="ratio-slider">1,618×</output>
+        </div>
+        <input id="ratio-slider" type="range" min="1.05" max="2.10" step="0.001" value="1.61803">
+      </div>
+    </div>
+
+    <p id="status" class="status" aria-live="polite">
+      Válassz sebességarányt, majd indítsd el az üldözést.
+    </p>
+
+    <details>
+      <summary>Megoldás ellenőrzése</summary>
+      <p>A keresett arány az aranymetszés: <strong>(1 + √5) / 2 ≈ 1,618</strong>. Vagyis a naszádnak körülbelül 1,618-szor olyan gyorsnak kell lennie, mint a csempészek hajója.</p>
+    </details>
+  </main>
+
+  <script>
+    (() => {
+      const ratioSlider = document.getElementById('ratio-slider');
+      const ratioOutput = document.getElementById('ratio-output');
+      const playButton = document.getElementById('play-button');
+      const resetButton = document.getElementById('reset-button');
+      const status = document.getElementById('status');
+      const pursuitTrail = document.getElementById('pursuit-trail');
+      const sightline = document.getElementById('sightline');
+      const policeBoat = document.getElementById('police-boat');
+      const smugglerBoat = document.getElementById('smuggler-boat');
+
+      const phi = (1 + Math.sqrt(5)) / 2;
+      const shoreGuardX = 160;
+      const smugglerX = 420;
+      const shoreY = 336;
+      const pixelsPerD = 260;
+      const endDistance = 1;
+      const exactTolerance = 0.0011;
+      const integrationStep = 0.0005;
+
+      let ratio = Number(ratioSlider.value);
+      let time = 0;
+      let relative = { x: 1, y: 0 };
+      let running = false;
+      let finished = false;
+      let previousFrame = null;
+      let trailPoints = [{ x: shoreGuardX, y: shoreY }];
+      let animationFrame = null;
+
+      const fmt = (value, digits = 2) => value.toFixed(digits).replace('.', ',');
+      const distance = (point) => Math.hypot(point.x, point.y);
+
+      function derivative(point) {
+        const length = distance(point);
+        if (length < 1e-12) return { x: 0, y: 0 };
+        return {
+          x: -ratio * point.x / length,
+          y: 1 - ratio * point.y / length
+        };
+      }
+
+      function add(point, change, amount) {
+        return { x: point.x + change.x * amount, y: point.y + change.y * amount };
+      }
+
+      function rk4(point, step) {
+        const k1 = derivative(point);
+        const k2 = derivative(add(point, k1, step / 2));
+        const k3 = derivative(add(point, k2, step / 2));
+        const k4 = derivative(add(point, k3, step));
+        return {
+          x: point.x + step * (k1.x + 2 * k2.x + 2 * k3.x + k4.x) / 6,
+          y: point.y + step * (k1.y + 2 * k2.y + 2 * k3.y + k4.y) / 6
+        };
+      }
+
+      function positions() {
+        const target = { x: smugglerX, y: shoreY - pixelsPerD * time };
+        const guard = {
+          x: shoreGuardX + pixelsPerD * (1 - relative.x),
+          y: shoreY - pixelsPerD * (time - relative.y)
+        };
+        return { target, guard };
+      }
+
+      function render() {
+        const { target, guard } = positions();
+        trailPoints.push(guard);
+        if (trailPoints.length > 900) trailPoints.shift();
+        pursuitTrail.setAttribute('d', trailPoints.map((point, index) =>
+          `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`
+        ).join(' '));
+
+        const angle = Math.atan2(target.y - guard.y, target.x - guard.x) * 180 / Math.PI;
+        policeBoat.setAttribute('transform', `translate(${guard.x.toFixed(2)} ${guard.y.toFixed(2)}) rotate(${angle.toFixed(2)})`);
+        smugglerBoat.setAttribute('transform', `translate(${target.x.toFixed(2)} ${target.y.toFixed(2)}) rotate(270)`);
+        sightline.setAttribute('x1', guard.x.toFixed(2));
+        sightline.setAttribute('y1', guard.y.toFixed(2));
+        sightline.setAttribute('x2', target.x.toFixed(2));
+        sightline.setAttribute('y2', target.y.toFixed(2));
+        updateStatus();
+      }
+
+      function updateStatus(outcome = '') {
+        const gap = distance(relative);
+        const live = `Idő: ${fmt(time, 3)} d/v · csempészek a parttól: ${fmt(time, 3)} d · köztük: ${fmt(gap, 3)} d.`;
+        if (outcome === 'exact') {
+          status.innerHTML = `<strong>Éppen d-nél találkoznak.</strong> ${live} Ez a keresett sebességarány.`;
+        } else if (outcome === 'early') {
+          status.innerHTML = `<strong>A naszád ${fmt(time, 3)} d-re a parttól éri utol őket.</strong> ${live} Lassítsd a naszádot, hogy a találkozás d-nél legyen.`;
+        } else if (outcome === 'late') {
+          status.innerHTML = `<strong>d-nél még nem érte utol őket.</strong> ${live} Növeld a naszád sebességét.`;
+        } else if (finished) {
+          status.innerHTML = `<strong>A szimuláció véget ért.</strong> ${live}`;
+        } else {
+          status.textContent = running || time > 0 ? live : 'Válassz sebességarányt, majd indítsd el az üldözést.';
+        }
+      }
+
+      function outcomeAtEnd() {
+        if (Math.abs(ratio - phi) <= exactTolerance) {
+          time = endDistance;
+          relative = { x: 0, y: 0 };
+          return 'exact';
+        }
+        const catchTime = ratio / (ratio * ratio - 1);
+        if (catchTime < endDistance) {
+          time = catchTime;
+          relative = { x: 0, y: 0 };
+          return 'early';
+        }
+        time = endDistance;
+        return 'late';
+      }
+
+      function stopWithOutcome() {
+        const outcome = outcomeAtEnd();
+        running = false;
+        finished = true;
+        previousFrame = null;
+        playButton.textContent = 'Lejátszás újra';
+        playButton.setAttribute('aria-pressed', 'false');
+        render();
+        updateStatus(outcome);
+      }
+
+      function frame(timestamp) {
+        if (!running) return;
+        if (previousFrame === null) previousFrame = timestamp;
+        const elapsedSeconds = Math.min((timestamp - previousFrame) / 1000, 0.05);
+        previousFrame = timestamp;
+        let remaining = elapsedSeconds * 0.42;
+
+        const catchTime = ratio / (ratio * ratio - 1);
+        const nearExact = Math.abs(ratio - phi) <= exactTolerance;
+        const stopTime = nearExact ? endDistance : Math.min(endDistance, catchTime);
+
+        while (remaining > 0 && time < stopTime) {
+          const step = Math.min(remaining, integrationStep, stopTime - time);
+          relative = rk4(relative, step);
+          time += step;
+          remaining -= step;
+        }
+
+        render();
+        if (time >= stopTime - 1e-10) {
+          stopWithOutcome();
+        } else {
+          animationFrame = requestAnimationFrame(frame);
+        }
+      }
+
+      function reset() {
+        if (animationFrame !== null) cancelAnimationFrame(animationFrame);
+        running = false;
+        finished = false;
+        previousFrame = null;
+        time = 0;
+        relative = { x: 1, y: 0 };
+        trailPoints = [{ x: shoreGuardX, y: shoreY }];
+        playButton.textContent = 'Indítás';
+        playButton.setAttribute('aria-pressed', 'false');
+        render();
+      }
+
+      function play() {
+        if (running) {
+          running = false;
+          previousFrame = null;
+          playButton.textContent = 'Folytatás';
+          playButton.setAttribute('aria-pressed', 'false');
+          updateStatus();
+          return;
+        }
+        if (finished) reset();
+        running = true;
+        playButton.textContent = 'Szünet';
+        playButton.setAttribute('aria-pressed', 'true');
+        updateStatus();
+        animationFrame = requestAnimationFrame(frame);
+      }
+
+      ratioSlider.addEventListener('input', () => {
+        ratio = Number(ratioSlider.value);
+        ratioOutput.textContent = `${fmt(ratio, 3)}×`;
+        reset();
+      });
+
+      playButton.addEventListener('click', play);
+      resetButton.addEventListener('click', reset);
+
+      ratioOutput.textContent = `${fmt(ratio, 3)}×`;
+      render();
+    })();
+  </script>
+</body>
+</html>
